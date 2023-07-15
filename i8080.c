@@ -205,9 +205,34 @@ void CMA() {
 	cpu.a = ~(cpu.a);
 }
 
+void STA() {
+	uint8_t lo = read(cpu.pc+1);
+	uint8_t hi = read(cpu.pc);
+	uint16_t addr = (hi << 4) | lo;
+	write(addr, cpu.a);
+	cpu.pc += 2;
+}
+
+void STC() {
+	setFlag(C, 1);
+}
+
+void LDA() {
+	uint8_t lo = read(cpu.pc);
+	uint8_t hi = read(cpu.pc+1);
+	uint16_t addr = hi << 8 | lo;
+	cpu.a = read(addr);
+	cpu.pc += 2;
+}
+
+void CMC() {
+	setFlag(C, !(getFlag(C)));
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
+	uint8_t tmp8;
 	switch(cpu.opcode) {
 		case 0x00: NOP(); break;
 		case 0x01: {temp = getBC(); LXI(&temp); setBC(temp); break;}
@@ -260,6 +285,24 @@ void cycle() {
 		case 0x2D: DCR(&cpu.l); break;
 		case 0x2E: MVI(&cpu.l); break;
 		case 0x2F: CMA(); break;
+	
+		// 0x30 - 0x3F
+		case 0x30: NOP(); break;
+		case 0x31: {LXI(&cpu.sp); break;}
+		case 0x32: STA(); break;
+		case 0x33: {INX(&cpu.sp); break;}
+		case 0x34: {tmp8 = read(getHL()); INR(&tmp8); write(getHL(), tmp8); break;}
+		case 0x35: {tmp8 = read(getHL()); DCR(&tmp8); write(getHL(), tmp8); break;}
+		case 0x36: {MVI(&tmp8); write(getHL(), tmp8); break;}
+		case 0x37: STC(); break;
+		case 0x38: NOP(); break;
+		case 0x39: DAD(cpu.sp); break;
+		case 0x3A: LDA(); break;
+		case 0x3B: { DCX(&cpu.sp); break; } break; 
+		case 0x3C: INR(&cpu.a); break;
+		case 0x3D: DCR(&cpu.a); break;
+		case 0x3E: MVI(&cpu.a); break;
+		case 0x3F: CMC(); break;
 	}
 }
 
