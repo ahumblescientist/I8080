@@ -18,6 +18,7 @@ void initCpu() {
 
 uint8_t read(uint16_t addr) {
 	// TODO
+	return 0;
 }
 
 void write(uint16_t addr, uint8_t b) {
@@ -61,7 +62,7 @@ void setFlag(Flag f, uint8_t n) {
 	}
 }
 
-void getFlag(Flag f) {
+uint8_t getFlag(Flag f) {
 	return (cpu.f & f);
 }
 
@@ -85,7 +86,7 @@ void LXI(uint16_t *R) {
 	*R = (msb << 8) | lsb;
 }
 
-void STA(uint16_t R) {
+void STAX(uint16_t R) {
 	write(R, cpu.a);
 }
 
@@ -121,7 +122,7 @@ void MVI(uint8_t *R) {
 }
 
 void RLC() {
-	setFlag(C, (cpu.a & 128));
+	setFlag(C, cpu.a & 128); // 128 is equivalnt to only the 8th bit being on in binary
 	cpu.a <<= 1;
 	cpu.a |= (getFlag(C) ? 1 : 0);
 }
@@ -131,5 +132,39 @@ void DAD(uint16_t R) {
 	setHL(getHL() + R);
 }
 
-void LDAX() {
+void LDAX(uint16_t R) {
+	cpu.a = read(R);
+}
+
+void DCX(uint16_t *R) {
+	*R -= 1;
+}
+
+void RRC() {
+	setFlag(C, cpu.a & 1);
+	cpu.a >>= 1;
+	cpu.a |= (getFlag(C) ? 128 : 0);
+}
+
+void cycle() {
+	// for now just a template for storing instructions, later will merge with the I8080 structure
+	uint16_t temp;
+	switch(cpu.opcode) {
+		case 0x00: NOP(); break;
+		case 0x01: {temp = getBC(); LXI(&temp); setBC(temp); break;}
+		case 0x02: STAX(getBC()); break;
+		case 0x03: {temp = getBC(); INX(&temp); setBC(temp); break;}
+		case 0x04: INR(&cpu.b); break;
+		case 0x05: DCR(&cpu.b); break;
+		case 0x06: MVI(&cpu.b); break;
+		case 0x07: RLC(); break;
+		case 0x08: NOP(); break;
+		case 0x09: DAD(getBC()); break;
+		case 0x0A: LDAX(getBC()); break;
+		case 0x0B: { temp = getBC(); DCX(&temp); setBC(temp); break; } break; 
+		case 0x0C: INR(&cpu.c); break;
+		case 0x0D: DCR(&cpu.c); break;
+		case 0x0E: MVI(&cpu.c); break;
+		case 0x0F: RRC(); break;
+	}
 }

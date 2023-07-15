@@ -4,14 +4,14 @@
 #include <stdint.h>
 
 typedef enum {
-	C   = (1 << 0);
-	No1 = (1 << 1);
-	P   = (1 << 2);
-	No2 = (1 << 3);
-	A   = (1 << 4);
-	No3 = (1 << 5);
-	Z   = (1 << 6);
-	S   = (1 << 7);
+	C   = (1 << 0),
+	No1 = (1 << 1),
+	P   = (1 << 2),
+	No2 = (1 << 3),
+	A   = (1 << 4),
+	No3 = (1 << 5),
+	Z   = (1 << 6),
+	S   = (1 << 7),
 } Flag;
 
 typedef struct {
@@ -35,7 +35,7 @@ void setHL(uint16_t);
 uint16_t getBC();
 uint16_t getDE();
 uint16_t getHL();
-uint8_t getFlag(Flag, uint8_t);
+uint8_t getFlag(Flag);
 void setFlag(Flag, uint8_t);
 
 #endif

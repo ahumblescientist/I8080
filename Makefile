@@ -1,5 +1,5 @@
-CFILES = main.c 
-HFILES = Makefile 
+CFILES = main.c  i8080.c
+HFILES = Makefile i8080.h
 FILES = $(CFILES) $(HFILES)
 CC = clang
 OUT = bin/main
