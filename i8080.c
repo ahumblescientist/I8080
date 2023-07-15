@@ -229,6 +229,10 @@ void CMC() {
 	setFlag(C, !(getFlag(C)));
 }
 
+void MOV(uint8_t *dst, uint8_t src) {
+	*dst = src;
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -303,6 +307,24 @@ void cycle() {
 		case 0x3D: DCR(&cpu.a); break;
 		case 0x3E: MVI(&cpu.a); break;
 		case 0x3F: CMC(); break;
+		
+		// 0x40 - 0x4F
+		case 0x40: MOV(&cpu.b, cpu.b); break;
+		case 0x41: MOV(&cpu.b, cpu.c); break;
+		case 0x42: MOV(&cpu.b, cpu.d); break;
+		case 0x43: MOV(&cpu.b, cpu.e); break;
+		case 0x44: MOV(&cpu.b, cpu.h); break;
+		case 0x45: MOV(&cpu.b, cpu.l); break;
+		case 0x46: MOV(&cpu.b, read(getHL())); break;
+		case 0x47: MOV(&cpu.b, cpu.a); break;
+		case 0x48: MOV(&cpu.c, cpu.b); break;
+		case 0x49: MOV(&cpu.c, cpu.c); break;
+		case 0x4A: MOV(&cpu.c, cpu.d); break;
+		case 0x4B: MOV(&cpu.c, cpu.e); break;
+		case 0x4C: MOV(&cpu.c, cpu.h); break;
+		case 0x4D: MOV(&cpu.c, cpu.l); break;
+		case 0x4E: MOV(&cpu.c, read(getHL())); break;
+		case 0x4F: MOV(&cpu.c, cpu.a); break;
 	}
 }
 
