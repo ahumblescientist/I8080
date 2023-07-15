@@ -244,6 +244,7 @@ void ADD(uint8_t R) {
 	cpu.a += R;
 	setFlag(C, (orig & 128) && !(cpu.a & 128));
 	setFlag(S, cpu.a & 128);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 }
@@ -253,6 +254,27 @@ void ADC(uint8_t R) {
 	cpu.a += R + (getFlag(C) ? 1 : 0);
 	setFlag(C, (orig & 128) && !(cpu.a & 128));
 	setFlag(S, cpu.a & 128);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
+	setFlag(Z, cpu.a == 0);
+	setFlag(P, parity(cpu.a));
+}
+
+void SUB() {
+	uint8_t orig = cpu.a;
+	cpu.a -= R;
+	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(S, cpu.a & 128);
+	setFlag(Z, cpu.a == 0);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
+	setFlag(P, parity(cpu.a));
+}
+
+void SUBB() {
+	uint8_t orig = cpu.a;
+	cpu.a -= R - (getFlag(C) ? 1 : 0);
+	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(S, cpu.a & 128);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 }
@@ -422,6 +444,24 @@ void cycle() {
 		case 0x8D: ADC(cpu.l); break;
 		case 0x8E: ADC(read(getHL())); break;
 		case 0x8F: ADC(cpu.a); break;
+		
+		// 0x90 - 0x9F
+		case 0x90: SUB(cpu.b); break;
+		case 0x91: SUB(cpu.c); break;
+		case 0x92: SUB(cpu.d); break;
+		case 0x93: SUB(cpu.e); break;
+		case 0x94: SUB(cpu.h); break;
+		case 0x95: SUB(cpu.l); break;
+		case 0x96: SUB(read(getHL())); break;
+		case 0x97: SUB(cpu.a); break;
+		case 0x98: SUBB(cpu.b); break;
+		case 0x99: SUBB(cpu.c); break;
+		case 0x9A: SUBB(cpu.d); break;
+		case 0x9B: SUBB(cpu.e); break;
+		case 0x9C: SUBB(cpu.h); break;
+		case 0x9D: SUBB(cpu.l); break;
+		case 0x9E: SUBB(read(getHL())); break;
+		case 0x9F: SUBB(cpu.a); break;
 	}
 }
 
