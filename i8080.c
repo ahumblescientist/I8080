@@ -84,6 +84,7 @@ void LXI(uint16_t *R) {
 	uint16_t msb = read(cpu.pc+1);
 	uint16_t lsb = read(cpu.pc);
 	*R = (msb << 8) | lsb;
+	pc+=2;
 }
 
 void STAX(uint16_t R) {
@@ -119,6 +120,7 @@ void DCR(uint8_t *R) {
 
 void MVI(uint8_t *R) {
 	*R = read(cpu.pc);
+	cpu.pc++;
 }
 
 void RLC() {
@@ -160,6 +162,49 @@ void RAR() {
 	cpu.a |= (getFlag(C) ? 128 : 0);
 }
 
+void SHLD() {
+	hi = read(cpu.pc+1);
+	lo = read(cpu.pc);
+	cpu.pc += 2;
+	addr = (hi << 8) | lo;
+	write(addr, cpu.l);
+	write(addr+1, cpu.h);
+}
+
+void DAA() {
+	uint8_t add = 0x00;
+	if(cpu.a & 0x0F > 9 || getFlag(A)) {
+		add += 0x06;
+		if( (cpu.a & 0x08) && !((cpu.a + add) & 0x08)) {
+			setFlag(A, 1);
+		} else {
+			setFlag(A, 0);
+		}
+	}
+	if( ( ((cpu.a+add) & 0xF0) >> 4) > 9 || getFlag(C)) {
+		add += 0x60;
+		if( (cpu.a & 128) && !((cpu.a + add) & 128)) {
+			setFlag(C, 1);
+		} else {
+			setFlag(C, 0);
+		}
+	}
+	cpu.a += add;
+	setFlag(Z, cpu.a == 0);
+	setFlag(P, parity(cpu.a));
+	setFlag(S, cpu.a & 128);
+}
+
+void LHLD() {
+	cpu.l = read(read(cpu.pc));
+	cpu.h = read(read(cpu.pc+1));
+	cpu.pc += 2;
+}
+
+void CMA() {
+	cpu.a = ~(cpu.a);
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -197,6 +242,24 @@ void cycle() {
 		case 0x1D: DCR(&cpu.e); break;
 		case 0x1E: MVI(&cpu.e); break;
 		case 0x1F: RAR(); break;
+
+		// 0x20 - 0x2F
+		case 0x20: NOP(); break;
+		case 0x21: {temp = getHL(); LXI(&temp); setHL(temp); break;}
+		case 0x22: SHLD(getHL()); break;
+		case 0x23: {temp = getHL(); INX(&temp); setHL(temp); break;}
+		case 0x24: INR(&cpu.h); break;
+		case 0x25: DCR(&cpu.h); break;
+		case 0x26: MVI(&cpu.h); break;
+		case 0x27: DAA(); break;
+		case 0x28: NOP(); break;
+		case 0x29: DAD(getHL()); break;
+		case 0x2A: LHLD(); break;
+		case 0x2B: { temp = getHL(); DCX(&temp); setHL(temp); break; } break; 
+		case 0x2C: INR(&cpu.l); break;
+		case 0x2D: DCR(&cpu.l); break;
+		case 0x2E: MVI(&cpu.l); break;
+		case 0x2F: CMA(); break;
 	}
 }
 
