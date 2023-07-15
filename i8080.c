@@ -84,7 +84,7 @@ void LXI(uint16_t *R) {
 	uint16_t msb = read(cpu.pc+1);
 	uint16_t lsb = read(cpu.pc);
 	*R = (msb << 8) | lsb;
-	pc+=2;
+	cpu.pc+=2;
 }
 
 void STAX(uint16_t R) {
@@ -163,17 +163,17 @@ void RAR() {
 }
 
 void SHLD() {
-	hi = read(cpu.pc+1);
-	lo = read(cpu.pc);
+	uint8_t hi = read(cpu.pc+1);
+	uint8_t lo = read(cpu.pc);
 	cpu.pc += 2;
-	addr = (hi << 8) | lo;
+	uint16_t addr = (hi << 8) | lo;
 	write(addr, cpu.l);
 	write(addr+1, cpu.h);
 }
 
 void DAA() {
 	uint8_t add = 0x00;
-	if(cpu.a & 0x0F > 9 || getFlag(A)) {
+	if( (cpu.a & 0x0F) > 9 || getFlag(A)) {
 		add += 0x06;
 		if( (cpu.a & 0x08) && !((cpu.a + add) & 0x08)) {
 			setFlag(A, 1);
@@ -246,7 +246,7 @@ void cycle() {
 		// 0x20 - 0x2F
 		case 0x20: NOP(); break;
 		case 0x21: {temp = getHL(); LXI(&temp); setHL(temp); break;}
-		case 0x22: SHLD(getHL()); break;
+		case 0x22: SHLD(); break;
 		case 0x23: {temp = getHL(); INX(&temp); setHL(temp); break;}
 		case 0x24: INR(&cpu.h); break;
 		case 0x25: DCR(&cpu.h); break;
