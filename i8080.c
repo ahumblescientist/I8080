@@ -233,6 +233,12 @@ void MOV(uint8_t *dst, uint8_t src) {
 	*dst = src;
 }
 
+void HLT() {
+	if(!cpu.INTE) {
+		cpu.pc--;
+	}
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -325,6 +331,61 @@ void cycle() {
 		case 0x4D: MOV(&cpu.c, cpu.l); break;
 		case 0x4E: MOV(&cpu.c, read(getHL())); break;
 		case 0x4F: MOV(&cpu.c, cpu.a); break;
+
+		// 0x50 - 0x5F
+		case 0x50: MOV(&cpu.d, cpu.b); break;
+		case 0x51: MOV(&cpu.d, cpu.c); break;
+		case 0x52: MOV(&cpu.d, cpu.d); break;
+		case 0x53: MOV(&cpu.d, cpu.e); break;
+		case 0x54: MOV(&cpu.d, cpu.h); break;
+		case 0x55: MOV(&cpu.d, cpu.l); break;
+		case 0x56: MOV(&cpu.d, read(getHL())); break;
+		case 0x57: MOV(&cpu.d, cpu.a); break;
+		case 0x58: MOV(&cpu.e, cpu.b); break;
+		case 0x59: MOV(&cpu.e, cpu.c); break;
+		case 0x5A: MOV(&cpu.e, cpu.d); break;
+		case 0x5B: MOV(&cpu.e, cpu.e); break;
+		case 0x5C: MOV(&cpu.e, cpu.h); break;
+		case 0x5D: MOV(&cpu.e, cpu.l); break;
+		case 0x5E: MOV(&cpu.e, read(getHL())); break;
+		case 0x5F: MOV(&cpu.e, cpu.a); break;
+		
+		// 0x60 - 0x6F
+		case 0x60: MOV(&cpu.h, cpu.b); break;
+		case 0x61: MOV(&cpu.h, cpu.c); break;
+		case 0x62: MOV(&cpu.h, cpu.d); break;
+		case 0x63: MOV(&cpu.h, cpu.e); break;
+		case 0x64: MOV(&cpu.h, cpu.h); break;
+		case 0x65: MOV(&cpu.h, cpu.l); break;
+		case 0x66: MOV(&cpu.h, read(getHL())); break;
+		case 0x67: MOV(&cpu.h, cpu.a); break;
+		case 0x68: MOV(&cpu.l, cpu.b); break;
+		case 0x69: MOV(&cpu.l, cpu.c); break;
+		case 0x6A: MOV(&cpu.l, cpu.d); break;
+		case 0x6B: MOV(&cpu.l, cpu.e); break;
+		case 0x6C: MOV(&cpu.l, cpu.h); break;
+		case 0x6D: MOV(&cpu.l, cpu.l); break;
+		case 0x6E: MOV(&cpu.l, read(getHL())); break;
+		case 0x6F: MOV(&cpu.l, cpu.a); break;
+		
+
+		// 0x60 - 0x6F
+		case 0x70: write(getHL(), cpu.b); break;
+		case 0x71: write(getHL(), cpu.c); break;
+		case 0x72: write(getHL(), cpu.d); break;
+		case 0x73: write(getHL(), cpu.e); break;
+		case 0x74: write(getHL(), cpu.h); break;
+		case 0x75: write(getHL(), cpu.l); break;
+		case 0x76: HLT(); break;
+		case 0x77: write(getHL(), cpu.a); break;
+		case 0x78: MOV(&cpu.a, cpu.b); break;
+		case 0x79: MOV(&cpu.a, cpu.c); break;
+		case 0x7A: MOV(&cpu.a, cpu.d); break;
+		case 0x7B: MOV(&cpu.a, cpu.e); break;
+		case 0x7C: MOV(&cpu.a, cpu.h); break;
+		case 0x7D: MOV(&cpu.a, cpu.l); break;
+		case 0x7E: MOV(&cpu.a, read(getHL())); break;
+		case 0x7F: MOV(&cpu.a, cpu.a); break;
 	}
 }
 
