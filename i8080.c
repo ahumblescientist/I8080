@@ -239,6 +239,24 @@ void HLT() {
 	}
 }
 
+void ADD(uint8_t R) {
+	uint8_t orig = cpu.a;
+	cpu.a += R;
+	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(S, cpu.a & 128);
+	setFlag(Z, cpu.a == 0);
+	setFlag(P, parity(cpu.a));
+}
+
+void ADC(uint8_t R) {
+	uint8_t orig = cpu.a;
+	cpu.a += R + (getFlag(C) ? 1 : 0);
+	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(S, cpu.a & 128);
+	setFlag(Z, cpu.a == 0);
+	setFlag(P, parity(cpu.a));
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -369,7 +387,7 @@ void cycle() {
 		case 0x6F: MOV(&cpu.l, cpu.a); break;
 		
 
-		// 0x60 - 0x6F
+		// 0x70 - 0x7F
 		case 0x70: write(getHL(), cpu.b); break;
 		case 0x71: write(getHL(), cpu.c); break;
 		case 0x72: write(getHL(), cpu.d); break;
@@ -386,6 +404,24 @@ void cycle() {
 		case 0x7D: MOV(&cpu.a, cpu.l); break;
 		case 0x7E: MOV(&cpu.a, read(getHL())); break;
 		case 0x7F: MOV(&cpu.a, cpu.a); break;
+
+		// 0x80 - 0x8F
+		case 0x80: ADD(cpu.b); break;
+		case 0x81: ADD(cpu.c); break;
+		case 0x82: ADD(cpu.d); break;
+		case 0x83: ADD(cpu.e); break;
+		case 0x84: ADD(cpu.h); break;
+		case 0x85: ADD(cpu.l); break;
+		case 0x86: ADD(read(getHL())); break;
+		case 0x87: ADD(cpu.a); break;
+		case 0x88: ADC(cpu.b); break;
+		case 0x89: ADC(cpu.c); break;
+		case 0x8A: ADC(cpu.d); break;
+		case 0x8B: ADC(cpu.e); break;
+		case 0x8C: ADC(cpu.h); break;
+		case 0x8D: ADC(cpu.l); break;
+		case 0x8E: ADC(read(getHL())); break;
+		case 0x8F: ADC(cpu.a); break;
 	}
 }
 
