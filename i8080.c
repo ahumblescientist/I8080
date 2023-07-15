@@ -122,7 +122,7 @@ void MVI(uint8_t *R) {
 }
 
 void RLC() {
-	setFlag(C, cpu.a & 128); // 128 is equivalnt to only the 8th bit being on in binary
+	setFlag(C, cpu.a & 128); // 128 is equivalnt to only the most significant bit being on (0x80)
 	cpu.a <<= 1;
 	cpu.a |= (getFlag(C) ? 1 : 0);
 }
@@ -146,6 +146,20 @@ void RRC() {
 	cpu.a |= (getFlag(C) ? 128 : 0);
 }
 
+
+void RAL() {
+	cpu.a <<= 1;
+	setFlag(C, cpu.a & 128);
+	cpu.a |= (getFlag(C) ? 1 : 0);
+}
+
+
+void RAR() {
+	cpu.a >>= 1;
+	setFlag(C, cpu.a & 1);
+	cpu.a |= (getFlag(C) ? 128 : 0);
+}
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -166,5 +180,24 @@ void cycle() {
 		case 0x0D: DCR(&cpu.c); break;
 		case 0x0E: MVI(&cpu.c); break;
 		case 0x0F: RRC(); break;
+		// 0x10 - 0x1F
+		case 0x10: NOP(); break;
+		case 0x11: {temp = getDE(); LXI(&temp); setDE(temp); break;}
+		case 0x12: STAX(getDE()); break;
+		case 0x13: {temp = getDE(); INX(&temp); setDE(temp); break;}
+		case 0x14: INR(&cpu.d); break;
+		case 0x15: DCR(&cpu.d); break;
+		case 0x16: MVI(&cpu.d); break;
+		case 0x17: RAL(); break;
+		case 0x18: NOP(); break;
+		case 0x19: DAD(getDE()); break;
+		case 0x1A: LDAX(getDE()); break;
+		case 0x1B: { temp = getDE(); DCX(&temp); setDE(temp); break; } break; 
+		case 0x1C: INR(&cpu.e); break;
+		case 0x1D: DCR(&cpu.e); break;
+		case 0x1E: MVI(&cpu.e); break;
+		case 0x1F: RAR(); break;
 	}
 }
+
+
