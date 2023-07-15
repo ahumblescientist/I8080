@@ -262,7 +262,7 @@ void ADC(uint8_t R) {
 void SUB(uint8_t R) {
 	uint8_t orig = cpu.a;
 	cpu.a -= R;
-	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(C, !((orig & 128) && !(cpu.a & 128)) );
 	setFlag(S, cpu.a & 128);
 	setFlag(Z, cpu.a == 0);
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
@@ -272,7 +272,7 @@ void SUB(uint8_t R) {
 void SUBB(uint8_t R) {
 	uint8_t orig = cpu.a;
 	cpu.a -= R - (getFlag(C) ? 1 : 0);
-	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(C, !((orig & 128) && !(cpu.a & 128)) );
 	setFlag(S, cpu.a & 128);
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
@@ -297,6 +297,29 @@ void XRA(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+}
+
+void ORA(uint8_t R) {
+	uint8_t orig = cpu.a;
+	cpu.a |= R;
+	setFlag(C, 0);
+	setFlag(S, cpu.a & 128);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
+	setFlag(Z, cpu.a == 0);
+	setFlag(P, parity(cpu.a));
+}
+
+void CMP(uint8_t R) {
+	if(R - cpu.a == 0) {
+		setFlag(C, 0);
+		setFlag(Z, 1);
+	} else {
+		setFlag(Z, 0);
+		setFlag(C, cpu.a < R);
+	}
+	setFlag(S, ((cpu.a - R) & 128));
+	setFlag(A, !((cpu.a - R) & 0x08) && (cpu.a & 0x08));
+	setFlag(P, parity(cpu.a-R);
 }
 
 void cycle() {
@@ -500,6 +523,24 @@ void cycle() {
 		case 0xAD: XRA(cpu.l); break;
 		case 0xAE: XRA(read(getHL())); break;
 		case 0xAF: XRA(cpu.a); break;
+		
+		// 0xA0 - 0xAF
+		case 0xB0: ORA(cpu.b); break;
+		case 0xB1: ORA(cpu.c); break;
+		case 0xB2: ORA(cpu.d); break;
+		case 0xB3: ORA(cpu.e); break;
+		case 0xB4: ORA(cpu.h); break;
+		case 0xB5: ORA(cpu.l); break;
+		case 0xB6: ORA(read(getHL())); break;
+		case 0xB7: ORA(cpu.a); break;
+		case 0xB8: CMP(cpu.b); break;
+		case 0xB9: CMP(cpu.c); break;
+		case 0xBA: CMP(cpu.d); break;
+		case 0xBB: CMP(cpu.e); break;
+		case 0xBC: CMP(cpu.h); break;
+		case 0xBD: CMP(cpu.l); break;
+		case 0xBE: CMP(read(getHL())); break;
+		case 0xBF: CMP(cpu.a); break;
 	}
 }
 
