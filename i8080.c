@@ -459,6 +459,89 @@ void ACI() {
 	cpu.pc++;
 }
 
+void RNC() {
+	if(getFlag(C)) {
+		cpu.pc++;
+	} else {
+		cpu.pc  = read(cpu.sp);
+		cpu.pc  |= read(cpu.sp+1) << 8;
+		cpu.sp += 2;
+	}
+}
+
+void JNC() {
+	if(getFlag(C)) {
+		cpu.pc += 2;
+	} else {
+		uint8_t lo = read(cpu.pc);
+		uint8_t hi = read(cpu.pc+1);
+		uint16_t addr = ((uint16_t)hi << 8) | lo;
+		cpu.pc = addr;
+	}
+}
+
+void OUT() {
+	// TODO
+	cpu.pc++;	
+}
+
+void CNC() {
+	if(getFlag(C)) {
+		cpu.pc += 2;
+	} else {
+		CALL();
+	}
+}
+
+void SUI() {
+	uint8_t orig = cpu.a;
+	uint16_t result = cpu.a - read(cpu.pc);
+	cpu.a -= read(cpu.pc);
+	setFlag(C, result >> 8);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
+	setFlag(Z, cpu.a);
+	setFlag(P, parity(cpu.a));
+	setFlag(S, cpu.a & 128);
+}
+
+void RC() {
+	if(getFlag(C)) {
+		RET();
+	}
+}
+
+void JC() {
+	if(getFlag(C)) {
+		JMP();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void IN() {
+	// TODO
+	cpu.pc++;
+}
+
+void CC() {
+	if(getFlag(C)) {
+		CALL();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void SBI() {
+	uint8_t orig = cpu.a;
+	uint16_t result = cpu.a - read(cpu.pc) - (getFlag(C) ? 1 : 0);
+	cpu.a -= read(cpu.pc) + (getFlag(C) ? 1 : 0);
+	setFlag(C, result >> 8);
+	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
+	setFlag(Z, cpu.a);
+	setFlag(P, parity(cpu.a));
+	setFlag(S, cpu.a & 128);
+}
+
 
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
@@ -697,6 +780,24 @@ void cycle() {
 		case 0xCD: CALL(); break;
 		case 0xCE: ACI(); break;
 		case 0xCF: RST(1); break;
+
+		// 0xD0 - 0xDF
+		case 0xD0: RNC(); break;
+		case 0xD1: { temp = getDE();POP(&temp); setDE(temp); break;}
+		case 0xD2: JNC(); break;
+		case 0xD3: OUT(); break;
+		case 0xD4: CNC(); break;
+		case 0xD5: PUSH(getDE()); break;
+		case 0xD6: SUI(); break;
+		case 0xD7: RST(2); break;
+		case 0xD8: RC(); break;
+		case 0xD9: RET(); break;
+		case 0xDA: JC(); break;
+		case 0xDB: IN(); break;
+		case 0xDC: CC(); break;
+		case 0xDD: CALL(); break;
+		case 0xDE: SBI(); break;
+		case 0xDF: RST(3); break;
 	}
 }
 
