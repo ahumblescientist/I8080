@@ -542,6 +542,87 @@ void SBI() {
 	setFlag(S, cpu.a & 128);
 }
 
+void RPO() {
+	if(!getFlag(P)) {
+		RET();
+	}
+}
+
+void JPO() {
+	if(!getFlag(P)) {
+		JMP();
+	} else{
+		cpu.pc += 2;
+	}
+}
+
+void XTHL() {
+	uint8_t templ = cpu.l;
+	uint8_t temph = cpu.h;
+	cpu.l = read(cpu.sp);
+	cpu.h = read(cpu.sp+1);
+	write(cpu.sp, templ);
+	write(cpu.sp+1, temph);
+}
+
+
+void CPO() {
+	if(!getFlag(P)) {
+		CALL();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void ANI() {
+	cpu.a &= read(cpu.pc);
+	cpu.pc++;
+	setFlag(C, 0);
+	setFlag(Z, cpu.a == 0);
+	setFlag(S, cpu.a & 128);
+	setFlag(P, parity(cpu.a));
+}
+
+void RPE() {
+	if(getFlag(P)) {
+		RET();	
+	}
+}
+
+void PCHL() {
+	cpu.pc = getHL();
+}
+
+void JPE() {
+	if(getFlag(P)) {
+		JMP();
+	} else {
+		cpu.pc+=2;
+	}
+}
+
+void XCHG() {
+	uint16_t temp = getHL();
+	setHL(getDE());
+	setDE(temp);
+}
+
+void CPE() {
+	if(getFlag(P)) {
+		CALL();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void XRI() {
+	cpu.a ^= read(cpu.pc);
+	setFlag(C, 0);
+	setFlag(Z, cpu.a == 0);
+	setFlag(S, cpu.a & 128);
+	setFlag(P, parity(cpu.a));
+	cpu.pc++;
+}
 
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
@@ -798,6 +879,24 @@ void cycle() {
 		case 0xDD: CALL(); break;
 		case 0xDE: SBI(); break;
 		case 0xDF: RST(3); break;
+		
+		// 0xE0 - 0xEF
+		case 0xE0: RPO(); break;
+		case 0xE1: { temp = getHL();POP(&temp); setHL(temp); break;}
+		case 0xE2: JPO(); break;
+		case 0xE3: XTHL(); break;
+		case 0xE4: CPO(); break;
+		case 0xE5: PUSH(getHL()); break;
+		case 0xE6: ANI(); break;
+		case 0xE7: RST(4); break;
+		case 0xE8: RPE(); break;
+		case 0xE9: PCHL(); break;
+		case 0xEA: JPE(); break;
+		case 0xEB: XCHG(); break;
+		case 0xEC: CPE(); break;
+		case 0xED: CALL(); break;
+		case 0xEE: XRI(); break;
+		case 0xEF: RST(5); break;
 	}
 }
 
