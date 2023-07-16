@@ -624,6 +624,82 @@ void XRI() {
 	cpu.pc++;
 }
 
+void RP() {
+	if(!getFlag(S)) {
+		RET();
+	}
+}
+
+void JP() {
+	if(!getFlag(S)) {
+		JMP();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void DI() {
+	cpu.INTE = 0;
+}
+
+void CP() {
+	if(!getFlag(S)) {
+		CALL();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void ORI() {
+	cpu.a |= read(cpu.pc);
+	setFlag(C, 0);
+	setFlag(P, parity(cpu.a));
+	setFlag(S, cpu.a & 128);
+	setFlag(Z, cpu.a == 0);
+	cpu.pc++;
+}
+
+void RM() {
+	if(getFlag(S)) {
+		RET();
+	}
+}
+
+void SPHL() {
+	cpu.sp = getHL();
+}
+
+void JM() {
+	if(getFlag(S)) {
+		JMP();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void EI() {
+	cpu.INTE = 1;
+}
+
+void CM() {
+	if(getFlag(S)) {
+		CALL();
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void CPI() {
+	uint8_t by = read(cpu.pc++);
+	setFlag(Z, cpu.a == by);
+	setFlag(P, parity(cpu.a - by));
+	setFlag(S, (cpu.a - by) & 128);
+	setFlag(A, !((cpu.a - by) & 0x08) && (cpu.a & 0x08));
+	setFlag(C, cpu.a < by ? 1 : 0);
+}
+
+
+
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
@@ -897,6 +973,25 @@ void cycle() {
 		case 0xED: CALL(); break;
 		case 0xEE: XRI(); break;
 		case 0xEF: RST(5); break;
+		
+
+		// 0xF0 - 0xFF
+		case 0xF0: RP(); break;
+		case 0xF1: { POP(&temp); cpu.a = temp >> 8; cpu.f = temp; break;}
+		case 0xF2: JP(); break;
+		case 0xF3: DI(); break;
+		case 0xF4: CP(); break;
+		case 0xF5: PUSH((cpu.a << 8) | cpu.f); break;
+		case 0xF6: ORI(); break;
+		case 0xF7: RST(6); break;
+		case 0xF8: RM(); break;
+		case 0xF9: SPHL(); break;
+		case 0xFA: JM(); break;
+		case 0xFB: EI(); break;
+		case 0xFC: CM(); break;
+		case 0xFD: CALL(); break;
+		case 0xFE: CPI(); break;
+		case 0xFF: RST(7); break;
 	}
 }
 
