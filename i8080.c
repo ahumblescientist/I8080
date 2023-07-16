@@ -319,8 +319,146 @@ void CMP(uint8_t R) {
 	}
 	setFlag(S, ((cpu.a - R) & 128));
 	setFlag(A, !((cpu.a - R) & 0x08) && (cpu.a & 0x08));
-	setFlag(P, parity(cpu.a-R);
+	setFlag(P, parity(cpu.a-R));
 }
+
+void RNZ() {
+	if(getFlag(Z)) {
+		cpu.pc++;
+	} else {
+		cpu.pc = (uint16_t)read(cpu.sp) << 8;
+		cpu.pc |= read(cpu.sp+1);
+		cpu.sp+=2;
+	}
+}
+
+void POP(uint16_t *R) {
+	*R = (uint16_t)read(cpu.sp + 1) << 8;
+	*R |= read(cpu.sp);
+	cpu.sp += 2;
+}
+
+void JNZ() {
+	if(getFlag(Z)) {
+		cpu.pc += 2;
+	} else {
+		uint8_t lo = read(cpu.pc);
+		uint8_t hi = read(cpu.pc+1);
+		uint16_t addr = ((uint16_t)hi << 8) | lo;
+		cpu.pc = addr;
+	}
+}
+
+void JMP() {
+	uint8_t lo = read(cpu.pc);
+	uint8_t hi = read(cpu.pc+1);
+	uint16_t addr = ((uint16_t)hi << 8) | lo;
+	cpu.pc = addr;
+}
+
+void CNZ() {
+	if(getFlag(Z)) {
+		cpu.pc += 2;
+	} else {
+		uint8_t lo = read(cpu.pc);
+		uint8_t hi = read(cpu.pc+1);
+		uint16_t addr = ((uint16_t)hi << 8) | lo;
+		write(cpu.sp - 1, cpu.pc >> 8);
+		write(cpu.sp - 2, cpu.pc);
+		cpu.sp += 2;
+		cpu.pc += 2;
+
+	}
+}
+
+void PUSH(uint16_t R) {
+	write(cpu.sp - 1, (R & 0xFF00) >> 8);
+	write(cpu.sp - 2, R);
+	cpu.sp -= 2;
+}
+
+void ADI() {
+	uint16_t tmp16 = (uint16_t)cpu.a + (uint16_t)read(cpu.pc);
+	cpu.a += read(cpu.pc);
+	setFlag(C, tmp16 >> 16);
+	setFlag(A, ((cpu.a - read(cpu.pc)) & 0x08) && !(cpu.a & 0x08));
+	setFlag(Z, cpu.a);
+	setFlag(S, cpu.a & 128);
+	setFlag(P, parity(cpu.a));
+	cpu.pc++;
+}
+
+void RST(uint8_t l) {
+	write(cpu.sp - 1, cpu.pc >> 8);
+	write(cpu.sp - 2, cpu.pc);
+	cpu.sp += 2;
+	cpu.pc = l * 0x08;
+}
+
+void RZ() {
+	if(getFlag(Z)) {
+		cpu.pc = read(cpu.sp);
+		cpu.pc |= read(cpu.sp+1);
+		cpu.sp += 2;
+	} else {
+		cpu.pc += 1;
+	}
+}
+
+void RET() {
+	cpu.pc = read(cpu.sp);
+	cpu.pc |= read(cpu.sp+1) << 8;
+	cpu.sp += 2;
+}
+
+void JZ() {
+	if(getFlag(Z)) {
+		uint8_t lo = read(cpu.pc);
+		uint8_t hi = read(cpu.pc+1);
+		cpu.pc += 2;
+		cpu.pc = (hi << 8) | lo;
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void CZ() {
+	if(getFlag(Z)) {
+		uint8_t lo = read(cpu.pc);
+		uint8_t hi = read(cpu.pc+1);
+		cpu.pc+=2;
+		write(cpu.sp - 1, cpu.pc >> 8);
+		write(cpu.sp - 2, cpu.pc);
+		cpu.sp += 2;
+		cpu.pc = (hi << 8) | lo;
+	} else {
+		cpu.pc += 2;
+	}
+}
+
+void CALL() {
+	uint8_t lo = read(cpu.pc+0);
+	uint8_t hi = read(cpu.pc+1);
+	cpu.pc += 2;
+	write(cpu.sp-1, cpu.pc >> 8);
+	write(cpu.sp-2, cpu.pc);
+	cpu.sp += 2;
+	cpu.pc = (hi << 8) | lo;
+}
+
+
+void ACI() {
+	uint16_t tmp16 = (uint16_t)cpu.a + (uint16_t)read(cpu.pc) + (getFlag(C) ? 1 : 0);
+	cpu.a = tmp16;
+
+	setFlag(A, ((cpu.a - read(cpu.pc) - getFlag(C) ? 1 : 0) & 0x08) && !(cpu.a & 0x08));
+	setFlag(C, tmp16 >> 16);
+	setFlag(Z, cpu.a);
+	setFlag(S, cpu.a & 128);
+	setFlag(P, parity(cpu.a));
+	cpu.pc++;
+}
+
 
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
@@ -524,7 +662,7 @@ void cycle() {
 		case 0xAE: XRA(read(getHL())); break;
 		case 0xAF: XRA(cpu.a); break;
 		
-		// 0xA0 - 0xAF
+		// 0xB0 - 0xBF
 		case 0xB0: ORA(cpu.b); break;
 		case 0xB1: ORA(cpu.c); break;
 		case 0xB2: ORA(cpu.d); break;
@@ -541,6 +679,24 @@ void cycle() {
 		case 0xBD: CMP(cpu.l); break;
 		case 0xBE: CMP(read(getHL())); break;
 		case 0xBF: CMP(cpu.a); break;
+		
+		// 0xC0 - 0xCF
+		case 0xC0: RNZ(); break;
+		case 0xC1: { temp = getBC();POP(&temp); setBC(temp); break;}
+		case 0xC2: JNZ(); break;
+		case 0xC3: JMP(); break;
+		case 0xC4: CNZ(); break;
+		case 0xC5: PUSH(getBC()); break;
+		case 0xC6: ADI(); break;
+		case 0xC7: RST(0); break;
+		case 0xC8: RZ(); break;
+		case 0xC9: RET(); break;
+		case 0xCA: JZ(); break;
+		case 0xCB: JMP(); break;
+		case 0xCC: CZ(); break;
+		case 0xCD: CALL(); break;
+		case 0xCE: ACI(); break;
+		case 0xCF: RST(1); break;
 	}
 }
 
