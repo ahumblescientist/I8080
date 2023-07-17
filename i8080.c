@@ -1,10 +1,14 @@
 #include "i8080.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 I8080 cpu;
 
+#define TEST 
 
-void initCpu() {
-	cpu.pc = 0;
+
+void initCpu(uint8_t *mem, uint8_t devs_num) {
+	cpu.pc = 0x100;
 	cpu.sp = 0;
 	cpu.b = 0;
 	cpu.c = 0;
@@ -14,18 +18,22 @@ void initCpu() {
 	cpu.l = 0;
 	cpu.a = 0;
 	cpu.a = 0;
+	cpu.devs = malloc(sizeof(Device) * devs_num);
+	cpu.memory = mem;
+}
+
+
+void cadd(size_t a) {
+	cpu.cycles += a;
 }
 
 uint8_t read(uint16_t addr) {
-	// TODO
-	return 0;
+	return cpu.memory[addr];
 }
 
 void write(uint16_t addr, uint8_t b) {
-	// TODO
+	cpu.memory[addr] = b;
 }
-
-
 void setBC(uint16_t d) {
 	cpu.b = (d & 0xff00) >> 8;	
 	cpu.c = d;	
@@ -66,6 +74,11 @@ uint8_t getFlag(Flag f) {
 	return (cpu.f & f);
 }
 
+void debug() {
+	printf("PC: %X, AF: %X, BC: %X, DE: %X, HL: %X, SP: %X, CYC: %X\n", cpu.pc, 
+	(cpu.a << 8) | cpu.f, getBC(), getDE(), getHL(), cpu.sp, (unsigned int)cpu.cycles);
+}
+
 uint8_t parity(uint8_t n) {
 	int num=0;
 	for(uint8_t i=0;i<n;i++) {
@@ -77,7 +90,7 @@ uint8_t parity(uint8_t n) {
 }
 
 void NOP() {
-	// do nothing
+	cadd(4);	
 }
 
 void LXI(uint16_t *R) {
@@ -85,14 +98,17 @@ void LXI(uint16_t *R) {
 	uint16_t lsb = read(cpu.pc);
 	*R = (msb << 8) | lsb;
 	cpu.pc+=2;
+	cadd(10);
 }
 
 void STAX(uint16_t R) {
 	write(R, cpu.a);
+	cadd(7);
 }
 
 void INX(uint16_t *R) {
 	*R = *R + 1;
+	cadd(5);
 }
 
 
@@ -105,6 +121,7 @@ void INR(uint8_t *R) {
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
+	cadd(5);
 }
 
 void DCR(uint8_t *R) {
@@ -116,36 +133,45 @@ void DCR(uint8_t *R) {
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
+	cadd(5);
+
+
 }
 
 void MVI(uint8_t *R) {
 	*R = read(cpu.pc);
 	cpu.pc++;
+	cadd(7);
 }
 
 void RLC() {
 	setFlag(C, cpu.a & 128); // 128 is equivalnt to only the most significant bit being on (0x80)
 	cpu.a <<= 1;
 	cpu.a |= (getFlag(C) ? 1 : 0);
+	cadd(4);
 }
 
 void DAD(uint16_t R) {
 	setFlag(C, ( (uint32_t)R + (uint32_t)getHL() ) >> 16);
 	setHL(getHL() + R);
+	cadd(10);
 }
 
 void LDAX(uint16_t R) {
 	cpu.a = read(R);
+	cadd(7);
 }
 
 void DCX(uint16_t *R) {
 	*R -= 1;
+	cadd(5);
 }
 
 void RRC() {
 	setFlag(C, cpu.a & 1);
 	cpu.a >>= 1;
 	cpu.a |= (getFlag(C) ? 128 : 0);
+	cadd(4);
 }
 
 
@@ -153,6 +179,7 @@ void RAL() {
 	cpu.a <<= 1;
 	setFlag(C, cpu.a & 128);
 	cpu.a |= (getFlag(C) ? 1 : 0);
+	cadd(4);
 }
 
 
@@ -160,6 +187,7 @@ void RAR() {
 	cpu.a >>= 1;
 	setFlag(C, cpu.a & 1);
 	cpu.a |= (getFlag(C) ? 128 : 0);
+	cadd(4);
 }
 
 void SHLD() {
@@ -169,6 +197,7 @@ void SHLD() {
 	uint16_t addr = (hi << 8) | lo;
 	write(addr, cpu.l);
 	write(addr+1, cpu.h);
+	cadd(16);
 }
 
 void DAA() {
@@ -193,16 +222,19 @@ void DAA() {
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	setFlag(S, cpu.a & 128);
+	cadd(4);
 }
 
 void LHLD() {
 	cpu.l = read(read(cpu.pc));
 	cpu.h = read(read(cpu.pc+1));
 	cpu.pc += 2;
+	cadd(16);
 }
 
 void CMA() {
 	cpu.a = ~(cpu.a);
+	cadd(4);
 }
 
 void STA() {
@@ -211,10 +243,12 @@ void STA() {
 	uint16_t addr = (hi << 4) | lo;
 	write(addr, cpu.a);
 	cpu.pc += 2;
+	cadd(13);
 }
 
 void STC() {
 	setFlag(C, 1);
+	cadd(4);
 }
 
 void LDA() {
@@ -223,20 +257,24 @@ void LDA() {
 	uint16_t addr = hi << 8 | lo;
 	cpu.a = read(addr);
 	cpu.pc += 2;
+	cadd(13);
 }
 
 void CMC() {
 	setFlag(C, !(getFlag(C)));
+	cadd(4);
 }
 
 void MOV(uint8_t *dst, uint8_t src) {
 	*dst = src;
+	cadd(5);
 }
 
 void HLT() {
 	if(!cpu.INTE) {
 		cpu.pc--;
 	}
+	cadd(7);
 }
 
 void ADD(uint8_t R) {
@@ -247,6 +285,7 @@ void ADD(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void ADC(uint8_t R) {
@@ -257,6 +296,7 @@ void ADC(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void SUB(uint8_t R) {
@@ -267,6 +307,7 @@ void SUB(uint8_t R) {
 	setFlag(Z, cpu.a == 0);
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void SUBB(uint8_t R) {
@@ -277,6 +318,7 @@ void SUBB(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void ANA(uint8_t R) {
@@ -287,6 +329,7 @@ void ANA(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void XRA(uint8_t R) {
@@ -297,6 +340,7 @@ void XRA(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void ORA(uint8_t R) {
@@ -307,6 +351,7 @@ void ORA(uint8_t R) {
 	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	cadd(4);
 }
 
 void CMP(uint8_t R) {
@@ -320,15 +365,18 @@ void CMP(uint8_t R) {
 	setFlag(S, ((cpu.a - R) & 128));
 	setFlag(A, !((cpu.a - R) & 0x08) && (cpu.a & 0x08));
 	setFlag(P, parity(cpu.a-R));
+	cadd(7);
 }
 
 void RNZ() {
 	if(getFlag(Z)) {
 		cpu.pc++;
+		cadd(5);
 	} else {
 		cpu.pc = (uint16_t)read(cpu.sp) << 8;
 		cpu.pc |= read(cpu.sp+1);
 		cpu.sp+=2;
+		cadd(11);
 	}
 }
 
@@ -336,6 +384,7 @@ void POP(uint16_t *R) {
 	*R = (uint16_t)read(cpu.sp + 1) << 8;
 	*R |= read(cpu.sp);
 	cpu.sp += 2;
+	cadd(10);
 }
 
 void JNZ() {
@@ -347,6 +396,7 @@ void JNZ() {
 		uint16_t addr = ((uint16_t)hi << 8) | lo;
 		cpu.pc = addr;
 	}
+	cadd(10);
 }
 
 void JMP() {
@@ -354,6 +404,7 @@ void JMP() {
 	uint8_t hi = read(cpu.pc+1);
 	uint16_t addr = ((uint16_t)hi << 8) | lo;
 	cpu.pc = addr;
+	cadd(10);
 }
 
 void CNZ() {
@@ -369,12 +420,14 @@ void CNZ() {
 		cpu.pc += 2;
 
 	}
+	cadd(17);
 }
 
 void PUSH(uint16_t R) {
 	write(cpu.sp - 1, (R & 0xFF00) >> 8);
 	write(cpu.sp - 2, R);
 	cpu.sp -= 2;
+	cadd(11);
 }
 
 void ADI() {
@@ -386,6 +439,7 @@ void ADI() {
 	setFlag(S, cpu.a & 128);
 	setFlag(P, parity(cpu.a));
 	cpu.pc++;
+	cadd(7);
 }
 
 void RST(uint8_t l) {
@@ -393,6 +447,7 @@ void RST(uint8_t l) {
 	write(cpu.sp - 2, cpu.pc);
 	cpu.sp += 2;
 	cpu.pc = l * 0x08;
+	cadd(11);
 }
 
 void RZ() {
@@ -403,12 +458,14 @@ void RZ() {
 	} else {
 		cpu.pc += 1;
 	}
+	cadd(11);
 }
 
 void RET() {
 	cpu.pc = read(cpu.sp);
 	cpu.pc |= read(cpu.sp+1) << 8;
 	cpu.sp += 2;
+	cadd(10);
 }
 
 void JZ() {
@@ -420,6 +477,7 @@ void JZ() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(10);
 }
 
 void CZ() {
@@ -434,6 +492,7 @@ void CZ() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void CALL() {
@@ -442,8 +501,9 @@ void CALL() {
 	cpu.pc += 2;
 	write(cpu.sp-1, cpu.pc >> 8);
 	write(cpu.sp-2, cpu.pc);
-	cpu.sp += 2;
+	cpu.sp -= 2;
 	cpu.pc = (hi << 8) | lo;
+	cadd(17);
 }
 
 
@@ -457,6 +517,7 @@ void ACI() {
 	setFlag(S, cpu.a & 128);
 	setFlag(P, parity(cpu.a));
 	cpu.pc++;
+	cadd(7);
 }
 
 void RNC() {
@@ -467,6 +528,7 @@ void RNC() {
 		cpu.pc  |= read(cpu.sp+1) << 8;
 		cpu.sp += 2;
 	}
+	cadd(8);
 }
 
 void JNC() {
@@ -478,11 +540,13 @@ void JNC() {
 		uint16_t addr = ((uint16_t)hi << 8) | lo;
 		cpu.pc = addr;
 	}
+	cadd(10);
 }
 
 void OUT() {
-	// TODO
+	cpu.devs[read(cpu.pc)].out = cpu.a;
 	cpu.pc++;	
+	cadd(10);
 }
 
 void CNC() {
@@ -491,6 +555,7 @@ void CNC() {
 	} else {
 		CALL();
 	}
+	cadd(14);
 }
 
 void SUI() {
@@ -502,12 +567,14 @@ void SUI() {
 	setFlag(Z, cpu.a);
 	setFlag(P, parity(cpu.a));
 	setFlag(S, cpu.a & 128);
+	cadd(7);
 }
 
 void RC() {
 	if(getFlag(C)) {
 		RET();
 	}
+	cadd(8);
 }
 
 void JC() {
@@ -516,11 +583,13 @@ void JC() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(10);
 }
 
 void IN() {
-	// TODO
+	cpu.a = cpu.devs[read(cpu.pc)].in;
 	cpu.pc++;
+	cadd(10);
 }
 
 void CC() {
@@ -529,6 +598,7 @@ void CC() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void SBI() {
@@ -540,12 +610,14 @@ void SBI() {
 	setFlag(Z, cpu.a);
 	setFlag(P, parity(cpu.a));
 	setFlag(S, cpu.a & 128);
+	cadd(7);
 }
 
 void RPO() {
 	if(!getFlag(P)) {
 		RET();
 	}
+	cadd(8);
 }
 
 void JPO() {
@@ -554,6 +626,7 @@ void JPO() {
 	} else{
 		cpu.pc += 2;
 	}
+	cadd(10);
 }
 
 void XTHL() {
@@ -563,6 +636,7 @@ void XTHL() {
 	cpu.h = read(cpu.sp+1);
 	write(cpu.sp, templ);
 	write(cpu.sp+1, temph);
+	cadd(18);
 }
 
 
@@ -572,6 +646,7 @@ void CPO() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void ANI() {
@@ -581,16 +656,19 @@ void ANI() {
 	setFlag(Z, cpu.a == 0);
 	setFlag(S, cpu.a & 128);
 	setFlag(P, parity(cpu.a));
+	cadd(7);
 }
 
 void RPE() {
 	if(getFlag(P)) {
 		RET();	
 	}
+	cadd(8);
 }
 
 void PCHL() {
 	cpu.pc = getHL();
+	cadd(5);
 }
 
 void JPE() {
@@ -599,12 +677,14 @@ void JPE() {
 	} else {
 		cpu.pc+=2;
 	}
+	cadd(10);
 }
 
 void XCHG() {
 	uint16_t temp = getHL();
 	setHL(getDE());
 	setDE(temp);
+	cadd(5);
 }
 
 void CPE() {
@@ -613,6 +693,7 @@ void CPE() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void XRI() {
@@ -622,12 +703,14 @@ void XRI() {
 	setFlag(S, cpu.a & 128);
 	setFlag(P, parity(cpu.a));
 	cpu.pc++;
+	cadd(7);
 }
 
 void RP() {
 	if(!getFlag(S)) {
 		RET();
 	}
+	cadd(8);
 }
 
 void JP() {
@@ -636,10 +719,12 @@ void JP() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(10);
 }
 
 void DI() {
 	cpu.INTE = 0;
+	cadd(4);
 }
 
 void CP() {
@@ -648,6 +733,7 @@ void CP() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void ORI() {
@@ -657,16 +743,19 @@ void ORI() {
 	setFlag(S, cpu.a & 128);
 	setFlag(Z, cpu.a == 0);
 	cpu.pc++;
+	cadd(7);
 }
 
 void RM() {
 	if(getFlag(S)) {
 		RET();
 	}
+	cadd(16);
 }
 
 void SPHL() {
 	cpu.sp = getHL();
+	cadd(5);
 }
 
 void JM() {
@@ -675,10 +764,12 @@ void JM() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(10);
 }
 
 void EI() {
 	cpu.INTE = 1;
+	cadd(4);
 }
 
 void CM() {
@@ -687,6 +778,7 @@ void CM() {
 	} else {
 		cpu.pc += 2;
 	}
+	cadd(14);
 }
 
 void CPI() {
@@ -696,14 +788,15 @@ void CPI() {
 	setFlag(S, (cpu.a - by) & 128);
 	setFlag(A, !((cpu.a - by) & 0x08) && (cpu.a & 0x08));
 	setFlag(C, cpu.a < by ? 1 : 0);
+	cadd(7);
 }
-
 
 
 void cycle() {
 	// for now just a template for storing instructions, later will merge with the I8080 structure
 	uint16_t temp;
 	uint8_t tmp8;
+	cpu.opcode = read(cpu.pc++);
 	switch(cpu.opcode) {
 		case 0x00: NOP(); break;
 		case 0x01: {temp = getBC(); LXI(&temp); setBC(temp); break;}
@@ -993,6 +1086,19 @@ void cycle() {
 		case 0xFE: CPI(); break;
 		case 0xFF: RST(7); break;
 	}
+	if(cpu.pc == 5) {
+		if(cpu.c == 2) {
+			printf("%c", cpu.e);
+		} 
+		if(cpu.c == 9) {
+			for(uint16_t i = getDE();;i++) {
+				if(cpu.memory[i] == '$') {
+					break;
+				}
+				printf("%c", cpu.memory[i]);
+			}
+		}
+	}
 }
 
-
+#undef TEST

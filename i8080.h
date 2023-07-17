@@ -2,6 +2,7 @@
 #define I8080_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 typedef enum {
 	C   = (1 << 0),
@@ -15,16 +16,25 @@ typedef enum {
 } Flag;
 
 typedef struct {
+	uint8_t in;
+	uint8_t out;
+} Device;
+
+typedef struct {
 	uint16_t pc;
 	uint16_t sp;
 	uint8_t a,b,c,d,e,h,l;
+	size_t cycles;
 	uint8_t carry;
 	uint8_t f;
 	uint8_t INTE;
 	uint8_t opcode;
+	uint8_t *memory;
+	Device *devs; // you need to allocate as many devices as you need using initCpu, where each device index refers to its id
 } I8080;
 
-void initCpu();
+
+void initCpu(uint8_t *, uint8_t);
 
 // set
 void setBC(uint16_t);
@@ -37,5 +47,7 @@ uint16_t getDE();
 uint16_t getHL();
 uint8_t getFlag(Flag);
 void setFlag(Flag, uint8_t);
+void debug();
+void cycle();
 
 #endif
