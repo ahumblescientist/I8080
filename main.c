@@ -18,7 +18,9 @@ char *readFile(char *filename) {
 
 int main(int argc, char **argv) {
 	char *test = readFile(argv[1]);
+	test[0x7] = 0xC9;
 	initCpu((uint8_t *)test, 0);
+	debug();
 	while(1) {
 		cycle();
 		debug();
