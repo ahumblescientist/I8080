@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "i8080.h" 
 
+
 char *readFile(char *filename) {
 	FILE *file;
 	file = fopen(filename, "r");
@@ -19,11 +20,15 @@ char *readFile(char *filename) {
 int main(int argc, char **argv) {
 	char *test = readFile(argv[1]);
 	test[0x7] = 0xC9;
+	test[368] = 0x7;
+
+	test[0x59c] = 0xc3; //JMP    
+  test[0x59d] = 0xc2;    
+  test[0x59e] = 0x05;  
 	initCpu((uint8_t *)test, 0);
-	debug();
 	while(1) {
 		cycle();
-		debug();
+
 	}
 	return 0;
 }

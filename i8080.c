@@ -46,13 +46,13 @@ void setDE(uint16_t d) {
 }
 
 void setHL(uint16_t d) {
-	cpu.h = (d & 0xff00) >> 8;	
-	cpu.l = d;	
+	if(d != 0x6a6) {
+		printf("setting HL: %4X\n", cpu.pc);	
+	}
+	cpu.h = (d & 0xFF00) >> 8;	
+	cpu.l = d & 0x00FF;	
 }
 
-void setA(uint8_t a, uint8_t b) {
-	setFlag(A, (((a & 0x0F) + (b & 0x0F)) & 0x10) == 0x010);
-}
 
 uint16_t getBC() {
 	return (cpu.b << 8) | cpu.c;
@@ -79,9 +79,13 @@ uint8_t getFlag(Flag f) {
 	return (cpu.f & f);
 }
 
-void debug() {
-	printf("PC: %04X, AF: %04X, BC: %04X, DE: %04X, HL: %04X, SP: %04X, CYC: %X\n", cpu.pc, 
-	(cpu.a << 8) | cpu.f, getBC(), getDE(), getHL(), cpu.sp, (unsigned int)cpu.cycles);
+int debug(uint16_t s) {
+	printf("PC: %04X, AF: %04X, BC: %04X, DE: %04X, HL: %04X, SP: %04X, opcode: %X\n", cpu.pc, 
+	(cpu.a << 8) | cpu.f, getBC(), getDE(), getHL(), cpu.sp, read(cpu.pc));
+	if(cpu.pc == s) {
+		return 0;
+	}
+	return 1;
 }
 
 uint8_t parity(uint8_t n) {
@@ -107,7 +111,7 @@ void LXI(uint16_t *R) {
 }
 
 void STAX(uint16_t R) {
-	write(R, cpu.a);
+	write(cpu.a, getBC());
 	cadd(7);
 }
 
@@ -119,7 +123,6 @@ void INX(uint16_t *R) {
 
 void INR(uint8_t *R) {
 	*R += 1;
-	setA(*R - 1, 1);
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
@@ -127,11 +130,7 @@ void INR(uint8_t *R) {
 }
 
 void DCR(uint8_t *R) {
-	uint8_t bc = *R & (0b00001000);
 	*R -= 1;
-	uint8_t ac = *R & (0b00001000);
-
-	setFlag(A, bc == 1 && ac == 0);
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
@@ -193,8 +192,8 @@ void RAR() {
 }
 
 void SHLD() {
-	uint8_t hi = read(cpu.pc+1);
-	uint8_t lo = read(cpu.pc);
+	uint16_t lo = read(cpu.pc);
+	uint16_t hi = read(cpu.pc+1);
 	cpu.pc += 2;
 	uint16_t addr = (hi << 8) | lo;
 	write(addr, cpu.l);
@@ -228,8 +227,11 @@ void DAA() {
 }
 
 void LHLD() {
-	cpu.l = read(read(cpu.pc));
-	cpu.h = read(read(cpu.pc+1));
+	uint16_t lo = read(cpu.pc);
+	uint16_t hi = read(cpu.pc+1);
+	uint16_t addr = (hi << 8) | lo;
+	cpu.l = read(addr);
+	cpu.h = read(addr+1);
 	cpu.pc += 2;
 	cadd(16);
 }
@@ -240,9 +242,9 @@ void CMA() {
 }
 
 void STA() {
-	uint8_t lo = read(cpu.pc+1);
-	uint8_t hi = read(cpu.pc);
-	uint16_t addr = (hi << 4) | lo;
+	uint16_t lo = read(cpu.pc);
+	uint16_t hi = read(cpu.pc+1);
+	uint16_t addr = (hi << 8) | lo;
 	write(addr, cpu.a);
 	cpu.pc += 2;
 	cadd(13);
@@ -254,9 +256,9 @@ void STC() {
 }
 
 void LDA() {
-	uint8_t lo = read(cpu.pc);
-	uint8_t hi = read(cpu.pc+1);
-	uint16_t addr = hi << 8 | lo;
+	uint16_t lo = read(cpu.pc);
+	uint16_t hi = read(cpu.pc+1);
+	uint16_t addr = (hi << 8) | lo;
 	cpu.a = read(addr);
 	cpu.pc += 2;
 	cadd(13);
@@ -280,11 +282,11 @@ void HLT() {
 }
 
 void ADD(uint8_t R) {
+	uint16_t result = cpu.a + R;
 	uint8_t orig = cpu.a;
 	cpu.a += R;
-	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(C, result >> 8);
 	setFlag(S, cpu.a & 128);
-	setA(orig, R);
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -295,7 +297,6 @@ void ADC(uint8_t R) {
 	cpu.a += R + (getFlag(C) ? 1 : 0);
 	setFlag(C, (orig & 128) && !(cpu.a & 128));
 	setFlag(S, cpu.a & 128);
-	setA(orig, R+getFlag(C));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -307,17 +308,16 @@ void SUB(uint8_t R) {
 	setFlag(C, !((orig & 128) && !(cpu.a & 128)) );
 	setFlag(S, cpu.a & 128);
 	setFlag(Z, cpu.a == 0);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(P, parity(cpu.a));
 	cadd(4);
 }
 
 void SUBB(uint8_t R) {
-	uint8_t orig = cpu.a;
-	cpu.a -= R - (getFlag(C) ? 1 : 0);
-	setFlag(C, !((orig & 128) && !(cpu.a & 128)) );
+	R += getFlag(C);
+	uint16_t result = cpu.a - R;
+	cpu.a -= R;
+	setFlag(C, result >> 8);
 	setFlag(S, cpu.a & 128);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -328,7 +328,6 @@ void ANA(uint8_t R) {
 	cpu.a &= R;
 	setFlag(C, (orig & 128) && !(cpu.a & 128));
 	setFlag(S, cpu.a & 128);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -337,9 +336,8 @@ void ANA(uint8_t R) {
 void XRA(uint8_t R) {
 	uint8_t orig = cpu.a;
 	cpu.a ^= R;
-	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	setFlag(C, 0);
 	setFlag(S, cpu.a & 128);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -350,7 +348,6 @@ void ORA(uint8_t R) {
 	cpu.a |= R;
 	setFlag(C, 0);
 	setFlag(S, cpu.a & 128);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	cadd(4);
@@ -365,7 +362,6 @@ void CMP(uint8_t R) {
 		setFlag(C, cpu.a < R);
 	}
 	setFlag(S, ((cpu.a - R) & 128));
-	setFlag(A, !((cpu.a - R) & 0x08) && (cpu.a & 0x08));
 	setFlag(P, parity(cpu.a-R));
 	cadd(7);
 }
@@ -419,7 +415,6 @@ void ADI() {
 	uint16_t tmp16 = (uint16_t)cpu.a + (uint16_t)read(cpu.pc);
 	cpu.a += read(cpu.pc);
 	setFlag(C, tmp16 >> 8);
-	setA(orig, read(cpu.pc));
 	setFlag(Z, cpu.a == 0);
 	setFlag(S, cpu.a & 128);
 	setFlag(P, parity(cpu.a));
@@ -464,13 +459,7 @@ void JZ() {
 
 void CZ() {
 	if(getFlag(Z)) {
-		uint8_t lo = read(cpu.pc);
-		uint8_t hi = read(cpu.pc+1);
-		cpu.pc+=2;
-		write(cpu.sp - 1, cpu.pc >> 8);
-		write(cpu.sp - 2, cpu.pc);
-		cpu.sp += 2;
-		cpu.pc = (hi << 8) | lo;
+		CALL();
 	} else {
 		cpu.pc += 2;
 	}
@@ -503,7 +492,6 @@ void ACI() {
 	uint16_t tmp16 = (uint16_t)cpu.a + (uint16_t)read(cpu.pc) + (getFlag(C) ? 1 : 0);
 	cpu.a = tmp16;
 
-	setA(orig, read(cpu.pc) + getFlag(C));
 	setFlag(C, tmp16 >> 8);
 	setFlag(Z, cpu.a == 0);
 	setFlag(S, cpu.a & 128);
@@ -551,7 +539,6 @@ void SUI() {
 	uint16_t result = cpu.a - read(cpu.pc);
 	cpu.a -= read(cpu.pc++);
 	setFlag(C, result >> 8);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	setFlag(S, cpu.a & 128);
@@ -594,7 +581,6 @@ void SBI() {
 	uint16_t result = cpu.a - read(cpu.pc) - (getFlag(C) ? 1 : 0);
 	cpu.a -= read(cpu.pc) + (getFlag(C) ? 1 : 0);
 	setFlag(C, result >> 8);
-	setFlag(A, (orig & 0x08) && !(cpu.a & 0x08));
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
 	setFlag(S, cpu.a & 128);
@@ -772,10 +758,10 @@ void CM() {
 
 void CPI() {
 	uint8_t by = read(cpu.pc++);
+
 	setFlag(Z, cpu.a == by);
 	setFlag(P, parity(cpu.a - by));
 	setFlag(S, (cpu.a - by) & 128);
-	setFlag(A, (((cpu.a&0xF) - (by&0x0F)) & 0x10) == 0x10);
 	setFlag(C, cpu.a < by ? 1 : 0);
 	cadd(7);
 }
@@ -846,7 +832,7 @@ void cycle() {
 		case 0x33: {INX(&cpu.sp); break;}
 		case 0x34: {tmp8 = read(getHL()); INR(&tmp8); write(getHL(), tmp8); break;}
 		case 0x35: {tmp8 = read(getHL()); DCR(&tmp8); write(getHL(), tmp8); break;}
-		case 0x36: {MVI(&tmp8); write(getHL(), tmp8); break;}
+		case 0x36: { MVI(&tmp8); write(getHL(), tmp8); break;}
 		case 0x37: STC(); break;
 		case 0x38: NOP(); break;
 		case 0x39: DAD(cpu.sp); break;
@@ -1088,6 +1074,9 @@ void cycle() {
 				printf("%c", cpu.memory[i]);
 			}
 		}
+	} else if(cpu.pc == 0){
+		printf("\n AF: %4X, BC: %4X, DE: %4X, HL: %4X\n", (cpu.a << 8) | cpu.f, getBC(), getDE(), getHL());
+		exit(0);
 	}
 	#endif
 }
