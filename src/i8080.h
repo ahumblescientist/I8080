@@ -30,6 +30,7 @@ typedef struct {
 	uint8_t INTE;
 	uint8_t opcode;
 	uint8_t *memory;
+	uint8_t I_opcode;
 	Device *devs; // you need to allocate as many devices as you need using initCpu, where each device index refers to its id
 } I8080;
 
@@ -49,5 +50,6 @@ uint8_t getFlag(Flag);
 void setFlag(Flag, uint8_t);
 int debug(uint16_t);
 void cycle();
+void interrupt(uint8_t);
 
 #endif
