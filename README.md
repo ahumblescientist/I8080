@@ -1,6 +1,5 @@
 # Intel 8080
-This repo contains my implementaion of the [I8080](https://en.wikipedia.org/wiki/Intel_8080) CPU
-for the purposes of testing i added a makefile and a main.c file
+This repo contains my implementaion of the [I8080](https://en.wikipedia.org/wiki/Intel_8080) CPU 
 
 ## Testing
 i used the amazing [cpudiag.asm](http://www.emulator101.com/full-8080-emulation.html) to find most of the bugs in the code
