@@ -368,6 +368,7 @@ void RNZ() {
 		cadd(5);
 	} else {
 		RET();
+		cadd(1);
 	}
 }
 
@@ -438,16 +439,15 @@ void RET() {
 void RZ() {
 	if(getFlag(Z)) {
 		RET();
-	} 
-	cadd(11);
+		cadd(1);
+	} else {
+		cadd(5);
+	}
 }
 
 void JZ() {
 	if(getFlag(Z)) {
-		uint8_t lo = read(cpu.pc);
-		uint8_t hi = read(cpu.pc+1);
-		cpu.pc += 2;
-		cpu.pc = (hi << 8) | lo;
+		JMP();
 	} else {
 		cpu.pc += 2;
 	}
@@ -459,8 +459,8 @@ void CZ() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void CALL() {
@@ -478,10 +478,10 @@ void CALL() {
 void CNZ() {
 	if(getFlag(Z)) {
 		cpu.pc += 2;
+		cadd(11);
 	} else {
 		CALL();
 	}
-	cadd(17);
 }
 
 
@@ -501,8 +501,10 @@ void ACI() {
 void RNC() {
 	if(!getFlag(C)) {
 		RET();
+		cadd(1);
+	} else {
+		cadd(5);
 	}
-	cadd(8);
 }
 
 void JNC() {
@@ -526,10 +528,10 @@ void OUT() {
 void CNC() {
 	if(getFlag(C)) {
 		cpu.pc += 2;
+		cadd(11);
 	} else {
 		CALL();
 	}
-	cadd(14);
 }
 
 void SUI() {
@@ -570,8 +572,8 @@ void CC() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void SBI() {
@@ -589,8 +591,10 @@ void SBI() {
 void RPO() {
 	if(!getFlag(P)) {
 		RET();
+		cadd(1);
+	} else {
+		cadd(5);
 	}
-	cadd(8);
 }
 
 void JPO() {
@@ -618,8 +622,8 @@ void CPO() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void ANI() {
@@ -635,8 +639,10 @@ void ANI() {
 void RPE() {
 	if(getFlag(P)) {
 		RET();	
+		cadd(1);
+	} else {
+		cadd(5);
 	}
-	cadd(8);
 }
 
 void PCHL() {
@@ -665,8 +671,8 @@ void CPE() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void XRI() {
@@ -682,8 +688,10 @@ void XRI() {
 void RP() {
 	if(!getFlag(S)) {
 		RET();
+		cadd(1);
+	} else {
+		cadd(5);
 	}
-	cadd(8);
 }
 
 void JP() {
@@ -705,8 +713,8 @@ void CP() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void ORI() {
@@ -722,8 +730,10 @@ void ORI() {
 void RM() {
 	if(getFlag(S)) {
 		RET();
+		cadd(1);
+	} else {
+		cadd(5);
 	}
-	cadd(16);
 }
 
 void SPHL() {
@@ -750,8 +760,8 @@ void CM() {
 		CALL();
 	} else {
 		cpu.pc += 2;
+		cadd(11);
 	}
-	cadd(14);
 }
 
 void CPI() {
