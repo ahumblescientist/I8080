@@ -37,7 +37,7 @@ typedef struct {
 } I8080;
 
 
-void initCpu(uint8_t *, uint8_t);
+void initCpu(uint8_t *, Devs *);
 
 // set
 void setBC(uint16_t);
