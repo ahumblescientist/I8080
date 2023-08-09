@@ -6,7 +6,7 @@ I8080 cpu;
 
 void RET(), CALL(), JMP();
 
-void initCpu(uint8_t *mem, uint8_t devs_num) {
+void initCpu(uint8_t *mem, Device *ds) {
 	cpu.pc = 0;
 #ifdef TEST_CPM
 	cpu.pc = 0x100;
@@ -20,7 +20,7 @@ void initCpu(uint8_t *mem, uint8_t devs_num) {
 	cpu.l = 0;
 	cpu.a = 0;
 	cpu.f = 2;
-	cpu.devs = malloc(sizeof(Device) * devs_num);
+	cpu.devs = ds;
 	cpu.memory = mem;
 }
 
