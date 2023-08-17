@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define TEST_CPM
+
 I8080 cpu;
 
 void RET(), CALL(), JMP();
@@ -124,6 +126,7 @@ void INR(uint8_t *R) {
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
+	setFlag(A, (*R & 0x0F) == 0);
 	cadd(5);
 }
 
@@ -132,6 +135,7 @@ void DCR(uint8_t *R) {
 	setFlag(Z, *R == 0);
 	setFlag(S, (*R & 128));
 	setFlag(P, parity(*R));
+	setFlag(A, (*R & 0x0F) != 0x0F);
 	cadd(5);
 
 
@@ -286,26 +290,25 @@ void ADD(uint8_t R) {
 	setFlag(S, cpu.a & 128);
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	setFlag(A, ((orig & 0x0F) + (R & 0x0F)) >> 4);
 	cadd(4);
 }
 
 void ADC(uint8_t R) {
 	uint8_t orig = cpu.a;
 	cpu.a += R + (getFlag(C) ? 1 : 0);
-	setFlag(C, (orig & 128) && !(cpu.a & 128));
+	uint16_t result = orig + R + getFlag(C);
+	setFlag(C, result >> 8);
 	setFlag(S, cpu.a & 128);
 	setFlag(Z, cpu.a == 0);
 	setFlag(P, parity(cpu.a));
+	setFlag(A, ((orig & 0x0F) + ((R + getFlag(C)) & 0x0F)) >> 4);
 	cadd(4);
 }
 
 void SUB(uint8_t R) {
-	uint8_t orig = cpu.a;
-	cpu.a -= R;
-	setFlag(C, !((orig & 128) && !(cpu.a & 128)) );
-	setFlag(S, cpu.a & 128);
-	setFlag(Z, cpu.a == 0);
-	setFlag(P, parity(cpu.a));
+	ADD(~(R) + 1);
+	setFlag(C, !getFlag(C));
 	cadd(4);
 }
 
@@ -382,19 +385,15 @@ void POP(uint16_t *R) {
 void JNZ() {
 	if(getFlag(Z)) {
 		cpu.pc += 2;
+		cadd(10);
 	} else {
-		uint8_t lo = read(cpu.pc);
-		uint8_t hi = read(cpu.pc+1);
-		uint16_t addr = ((uint16_t)hi << 8) | lo;
-		cpu.pc += 2;
-		cpu.pc = addr;
+		JMP();
 	}
-	cadd(10);
 }
 
 void JMP() {
-	uint8_t lo = read(cpu.pc);
-	uint8_t hi = read(cpu.pc+1);
+	uint8_t lo = read(cpu.pc++);
+	uint8_t hi = read(cpu.pc++);
 	uint16_t addr = ((uint16_t)hi << 8) | lo;
 	cpu.pc = addr;
 	cadd(10);
@@ -510,13 +509,10 @@ void RNC() {
 void JNC() {
 	if(getFlag(C)) {
 		cpu.pc += 2;
+		cadd(10);
 	} else {
-		uint8_t lo = read(cpu.pc);
-		uint8_t hi = read(cpu.pc+1);
-		uint16_t addr = ((uint16_t)hi << 8) | lo;
-		cpu.pc = addr;
+		JMP();
 	}
-	cadd(10);
 }
 
 void OUT() {
@@ -1104,3 +1100,5 @@ void cycle() {
 	}
 #endif
 }
+
+#undef TEST_CPM

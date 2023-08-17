@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "i8080.h" 
 
+#define TEST_CPM
+
 
 char *readFile(char *filename) {
 	FILE *file;
@@ -23,11 +25,9 @@ char *readFile(char *filename) {
 
 int main(int argc, char **argv) {
 #ifdef TEST_CPM
+	uint8_t *test = (uint8_t *) readFile(argv[1]);
 	test[0x7] = 0xc9;
-	test[368] = 0x7;
-	test[0x59c] = 0xc3;
-  test[0x59d] = 0xc2;
-  test[0x59e] = 0x05;
+	initCpu(test, 0);
 	while(1) {
 		cycle();
 	}
