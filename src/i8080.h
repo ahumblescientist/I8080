@@ -49,8 +49,8 @@ uint16_t getBC();
 uint16_t getDE();
 uint16_t getHL();
 uint8_t getFlag(Flag);
-void setFlag(Flag, uint8_t);
-int debug(uint16_t);
+void setFlag(Flag, uint32_t);
+int debug();
 void cycle();
 void interrupt(uint8_t);
 
