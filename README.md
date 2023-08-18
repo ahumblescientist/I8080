@@ -2,13 +2,13 @@
 This repo contains my implementaion of the [I8080](https://en.wikipedia.org/wiki/Intel_8080) CPU 
 
 ## Testing
-i used the amazing [cpudiag.asm](http://www.emulator101.com/full-8080-emulation.html) to find most of the bugs in the code
-and [TST8080.com](https://altairclone.com/downloads/cpu_tests/) was pretty helpful for some stuff i didnt notice with cpudiag
-![cpudiag output](cpudiag.png)
-
-
-## Note
-i implemented this cpu for the sole purpose of using it to emulate [the space invaders arcade machine](https://en.wikipedia.org/wiki/Space_Invaders), which according to [r/emudev](https://www.reddit.com/r/EmuDev/) bros doesnt use neither of the half carry flag nor the DAA instruction, so for now they are not implemented in this emulator(for now tho)
+all tests used for this emulator can be found [here](https://altairclone.com/downloads/cpu_tests/) and cpudiag [here](http://www.emulator101.com/full-8080-emulation.html)
+list of tests i used: 
+- [x] cpudiag.asm
+- [x] TST8080.COM
+- [x] 8080PRE.COM
+- [x] CPUTEST.COM (aka cpudiag II)
+- [] 8080EXM.COM ( seems to be a bug in some alu instruction -TODO- )
 
 
 # Resources 
