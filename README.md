@@ -8,7 +8,7 @@ list of tests i used:
 - [x] TST8080.COM
 - [x] 8080PRE.COM
 - [x] CPUTEST.COM (aka cpudiag II)
-- [] 8080EXM.COM ( seems to be a bug in some alu instruction -TODO- )
+- [ ] 8080EXM.COM ( seems to be a bug in some alu instruction -TODO- )
 
 
 # Resources 
