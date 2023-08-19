@@ -396,7 +396,7 @@ void ADI() {
 void RST(uint8_t l) {
 	write(cpu.sp - 1, cpu.pc >> 8);
 	write(cpu.sp - 2, cpu.pc);
-	cpu.sp += 2;
+	cpu.sp -= 2;
 	cpu.pc = l * 0x08;
 	cadd(11);
 }
